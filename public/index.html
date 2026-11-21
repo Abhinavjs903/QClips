@@ -2,65 +2,117 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ClipForge — Batch Reel Generator</title>
+<title>QClips — Batch Reel Generator</title>
 <style>
-:root{color-scheme:dark;font-family:Inter,system-ui,Segoe UI,sans-serif;background:#0b1020;color:#edf2ff}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#172342 0,#0b1020 55%)}
-main{max-width:760px;margin:0 auto;padding:48px 20px}
-header{margin-bottom:30px}.logo{font-weight:800;letter-spacing:.12em;color:#8daaff;font-size:13px}
-h1{font-size:clamp(32px,7vw,52px);margin:12px 0 8px;letter-spacing:-.04em}
-p{color:#aab6d1;line-height:1.55}.panel{background:#111a2e;border:1px solid #263451;border-radius:18px;padding:22px;margin:18px 0;box-shadow:0 18px 60px #0003}
-label{display:block;font-size:13px;color:#b9c5df;margin:0 0 9px}
-input{width:100%;background:#0b1325;border:1px solid #344563;border-radius:10px;padding:14px;color:#fff;font-size:15px;outline:none}
-input:focus{border-color:#819fff}button{border:0;border-radius:10px;background:#7997ff;color:#071126;font-weight:800;padding:14px 18px;cursor:pointer}
-button:disabled{opacity:.5;cursor:wait}.full{width:100%;margin-top:14px}
-.note{font-size:12px;color:#8795b2}.styles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+:root{color-scheme:dark;font-family:Inter,system-ui,Segoe UI,sans-serif;background:#090d18;color:#edf2ff}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -10%,#1c2b4b 0,#090d18 58%)}
+main{max-width:760px;margin:0 auto;padding:44px 20px}
+header{margin-bottom:28px}.logo{font-weight:800;letter-spacing:.16em;color:#93adff;font-size:12px}
+h1{font-size:clamp(34px,7vw,54px);margin:12px 0 8px;letter-spacing:-.05em;line-height:1.04}
+p{color:#aab6d1;line-height:1.55}.panel{background:#111a2b;border:1px solid #273754;border-radius:18px;padding:22px;margin:18px 0;box-shadow:0 18px 60px #0003}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
+.tab{background:#0b1324;border:1px solid #344563;color:#aebbd5;padding:12px;border-radius:10px;font-weight:700}
+.tab[aria-selected=true]{background:#1b2a4b;border-color:#8ba5ff;color:#fff}
+label{display:block;font-size:13px;color:#c1cce2;margin:0 0 9px}
+input{width:100%;background:#0b1325;border:1px solid #344563;border-radius:10px;padding:14px;color:#fff;font-size:14px}
+input:focus{outline:2px solid #819fff;outline-offset:1px}
+.note{font-size:12px;color:#8998b6}.styles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
 .style{background:#0b1325;border:1px solid #344563;padding:13px;border-radius:12px}
-.style b{display:block;font-size:14px;margin-bottom:5px}.style span{font-size:12px;color:#9eacc9}
-.status{display:none}.bar{height:9px;background:#273652;border-radius:20px;overflow:hidden;margin:14px 0}.bar>i{display:block;height:100%;width:0;background:#7b9aff;transition:width .3s}
-#message{color:#dce5ff;font-size:14px}#result a{color:#a9bdff;font-weight:700}
-.error{color:#ff9d9d}footer{font-size:12px;color:#73819f;margin-top:24px}
-@media(max-width:520px){main{padding:30px 14px}.styles{grid-template-columns:1fr}}
+.style b{display:block;font-size:14px;margin-bottom:5px}.style span{font-size:12px;color:#9eacc9;line-height:1.4}
+button{border:0;border-radius:10px;background:#829dff;color:#091329;font-weight:800;padding:14px 18px;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}.full{width:100%;margin-top:14px}
+.status{display:none}.bar{height:9px;background:#273652;border-radius:20px;overflow:hidden;margin:14px 0}.bar>i{display:block;height:100%;width:0;background:#829dff;transition:width .3s}
+#message{color:#dce5ff;font-size:14px;overflow-wrap:anywhere}#result a{color:#b8c8ff;font-weight:700}
+.error{color:#ffabab}footer{font-size:12px;color:#7887a5;margin-top:24px}
+[hidden]{display:none!important}
+@media(max-width:520px){main{padding:28px 14px}.styles{grid-template-columns:1fr}.panel{padding:17px}}
 </style></head>
 <body><main>
-<header><div class="logo">CLIPFORGE / LOCAL TOOL</div><h1>Your video.<br>40 moments. Ready.</h1><p>Split a video into 30-second segments and export each segment in two portrait styles.</p></header>
+<header><div class="logo">QCLIPS / LOCAL VIDEO TOOL</div><h1>Long video.<br>Short clips.</h1><p>Split a video into consecutive 30-second segments and export two vertical versions of every segment.</p></header>
 <section class="panel">
-<label for="url">YouTube video URL</label><input id="url" type="url" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
-<p class="note">Use only videos you own or are authorized to download. YouTube terms and copyright restrictions apply.</p>
-<label>Output styles — both generated</label>
-<div class="styles"><div class="style"><b>9:16 Center Crop</b><span>Fills the screen; edges may be cropped.</span></div><div class="style"><b>9:16 Blur Background</b><span>Preserves the full original frame.</span></div></div>
-<button id="start" class="full">Generate 30-second clips</button>
+<div class="tabs" role="tablist" aria-label="Video source">
+<button class="tab" id="uploadTab" role="tab" aria-selected="true" aria-controls="uploadPanel" type="button">Upload video</button>
+<button class="tab" id="youtubeTab" role="tab" aria-selected="false" aria-controls="youtubePanel" type="button">YouTube URL</button>
+</div>
+<div id="uploadPanel" role="tabpanel" aria-labelledby="uploadTab">
+<label for="video">Choose a video from your device</label>
+<input id="video" type="file" accept="video/mp4,video/quicktime,video/x-matroska,video/webm,.mp4,.mov,.mkv,.webm,.m4v">
+<p class="note">MP4, MOV, MKV, WEBM or M4V · Maximum 2 GB · Processing stays on this computer.</p>
+</div>
+<div id="youtubePanel" role="tabpanel" aria-labelledby="youtubeTab" hidden>
+<label for="url">YouTube video URL</label>
+<input id="url" type="url" placeholder="https://youtu.be/..." autocomplete="off">
+<p class="note">Use only content you own or are authorized to download. Some videos may be blocked by YouTube; upload a permitted local file as the fallback.</p>
+</div>
+<div style="margin-top:20px"><label>Both portrait styles are generated</label>
+<div class="styles">
+<div class="style"><b>9:16 Center Crop</b><span>Fills the vertical frame; some edges may be cropped.</span></div>
+<div class="style"><b>9:16 Blur Background</b><span>Keeps the complete source frame over a blurred background.</span></div>
+</div></div>
+<button id="start" class="full" type="button">Generate 30-second clips</button>
 </section>
-<section id="status" class="panel status">
-<strong id="state">Processing</strong><div class="bar"><i id="progress"></i></div><div id="message">Starting...</div>
-<div id="result" style="margin-top:16px"></div>
+<section id="status" class="panel status" aria-live="polite">
+<strong id="state">Processing</strong><div class="bar"><i id="progress"></i></div><div id="message">Starting...</div><div id="result" style="margin-top:16px"></div>
 </section>
-<footer>Runs locally on your computer. No AI API or paid clipping service. Processing time depends on video length and your CPU.</footer>
+<footer>Local-first FFmpeg processing. A 20-minute video creates about 40 segments and 80 MP4 files. Output is 1080×1920; time and disk usage depend on source length and resolution.</footer>
 </main>
 <script>
 const start=document.querySelector("#start"), statusBox=document.querySelector("#status");
 const state=document.querySelector("#state"), progress=document.querySelector("#progress");
 const message=document.querySelector("#message"), result=document.querySelector("#result");
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-start.onclick=async()=>{
-  const url=document.querySelector("#url").value.trim();
-  if(!url){alert("Paste a YouTube URL first.");return}
-  start.disabled=true;statusBox.style.display="block";result.innerHTML="";
-  state.textContent="Queued";message.textContent="Creating job...";progress.style.width="0%";
-  try{
-    const r=await fetch("/api/jobs",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url,clipSeconds:30})});
-    const data=await r.json();if(!r.ok)throw new Error(data.error||"Could not start job.");
-    let done=false;
-    while(!done){
-      await sleep(1800);
-      const s=await fetch("/api/jobs/"+data.id);const job=await s.json();
-      state.textContent=job.status.toUpperCase();message.textContent=job.message||"Working...";
-      progress.style.width=(job.progress||0)+"%";
-      if(job.status==="completed"){
-        done=true;result.innerHTML=`<p><b>${job.totalSegments} segments × 2 styles = ${job.outputCount} videos</b></p><p><a href="/api/jobs/${data.id}/download">Download all clips (.ZIP)</a></p>`;
-      }else if(job.status==="failed"){done=true;throw new Error(job.error||job.message)}
+const uploadTab=document.querySelector("#uploadTab"), youtubeTab=document.querySelector("#youtubeTab");
+const uploadPanel=document.querySelector("#uploadPanel"), youtubePanel=document.querySelector("#youtubePanel");
+let sourceMode="upload";
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+function setMode(mode){
+  sourceMode=mode; const isUpload=mode==="upload";
+  uploadTab.setAttribute("aria-selected",String(isUpload));
+  youtubeTab.setAttribute("aria-selected",String(!isUpload));
+  uploadPanel.hidden=!isUpload; youtubePanel.hidden=isUpload;
+}
+uploadTab.addEventListener("click",()=>setMode("upload"));
+youtubeTab.addEventListener("click",()=>setMode("youtube"));
+async function watchJob(id){
+  while(true){
+    await sleep(1600);
+    const response=await fetch("/api/jobs/"+encodeURIComponent(id));
+    const job=await response.json();
+    if(!response.ok)throw new Error(job.error||"Could not read job status.");
+    state.textContent=job.status.toUpperCase();
+    message.textContent=job.message||"Working...";
+    progress.style.width=(job.progress||0)+"%";
+    if(job.status==="completed"){
+      result.replaceChildren();
+      const summary=document.createElement("p");
+      summary.textContent=job.totalSegments+" segments × 2 styles = "+job.outputCount+" videos";
+      const link=document.createElement("a");
+      link.href="/api/jobs/"+encodeURIComponent(id)+"/download";
+      link.textContent="Download all clips (.ZIP)";
+      result.append(summary,link); return;
     }
-  }catch(e){state.textContent="ERROR";message.innerHTML='<span class="error"></span>';message.querySelector("span").textContent=e.message}
-  finally{start.disabled=false}
-};
+    if(job.status==="failed")throw new Error(job.error||job.message||"Processing failed.");
+  }
+}
+start.addEventListener("click",async()=>{
+  start.disabled=true;statusBox.style.display="block";result.replaceChildren();
+  state.textContent="QUEUED";message.textContent="Creating job...";message.classList.remove("error");progress.style.width="0%";
+  try{
+    let response;
+    if(sourceMode==="upload"){
+      const file=document.querySelector("#video").files[0];
+      if(!file)throw new Error("Choose a video file first.");
+      const form=new FormData();form.append("video",file);
+      message.textContent="Uploading video...";
+      response=await fetch("/api/jobs/upload",{method:"POST",body:form});
+    }else{
+      const url=document.querySelector("#url").value.trim();
+      if(!url)throw new Error("Paste a YouTube URL first.");
+      response=await fetch("/api/jobs",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})});
+    }
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||"Could not start job.");
+    await watchJob(data.id);
+  }catch(error){state.textContent="ERROR";message.textContent=error.message;message.classList.add("error");}
+  finally{start.disabled=false;}
+});
 </script></body></html>

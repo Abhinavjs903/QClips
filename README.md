@@ -1,80 +1,71 @@
-# ClipForge
+# QClips
 
-A small local-first YouTube video batch clipper. It splits an authorized source video into consecutive 30-second segments and creates **both** portrait variants for every segment:
-- `center-crop`: fills a 9:16 frame; sides/top-bottom may be cropped.
-- `blur-background`: preserves the full source frame over a blurred 9:16 background.
+A local-first batch video clipper. Upload a video file or provide a YouTube URL for a video you own or are authorized to download. QClips splits it into consecutive 30-second segments and generates **two 9:16 portrait versions** of every segment:
 
-A 20-minute source produces 40 segments and 80 MP4 files (40 × 2 styles). The final segment is kept even if shorter than 30 seconds.
+- **Center crop:** fills the vertical frame; edges may be cropped.
+- **Blur background:** preserves the complete source frame over a blurred vertical background.
+
+A 20-minute source produces 40 segments and 80 MP4 files. The final segment is kept even if shorter than 30 seconds.
 
 ## Requirements
 
-- Windows 10/11
+- Windows 10/11, macOS or Linux
 - Node.js 20+
-- FFmpeg (includes ffprobe)
-- yt-dlp
+- FFmpeg with ffprobe
+- yt-dlp only when using YouTube URLs
 
-Install tools from PowerShell:
+Install Node dependencies:
 
-```powershell
-winget install OpenJS.NodeJS.LTS
-winget install Gyan.FFmpeg
-winget install yt-dlp.yt-dlp
-```
-
-Close and reopen PowerShell after installation, then verify:
-
-```powershell
-node -v
-npm -v
-ffmpeg -version
-ffprobe -version
-yt-dlp --version
-```
-
-## Run
-
-In this folder:
-
-```powershell
+```bash
 npm install
+```
+
+Install FFmpeg and ensure both `ffmpeg` and `ffprobe` are in PATH. Install yt-dlp only if using YouTube URLs.
+
+## Run locally
+
+```bash
 npm start
 ```
 
 Open http://localhost:3000
 
-Paste a YouTube URL for a video you own or are authorized to download. Wait for processing, then download the ZIP.
+### Upload a local video
 
-## What costs money?
+Choose MP4, MOV, MKV, WEBM or M4V. Default upload limit is 2 GB; configure it with `MAX_VIDEO_MB`. Uploads are processed on the local machine and the temporary source upload is deleted after processing.
 
-The app and tools are free. It uses your own computer, so there is no API or hosting bill. Electricity and your computer's time are the only operating costs. Video processing speed depends on CPU, source resolution and duration.
+### Use a YouTube URL
 
-## Known limitations / safeguards
+Paste a URL for content you own or are authorized to download. QClips uses yt-dlp without extracting browser cookies or bypassing access restrictions. Some videos may be unavailable to third-party downloaders; use a permitted local file as fallback.
 
-- This tool does not bypass DRM, age restrictions, private videos, paid content, or other access controls.
-- Downloading from YouTube may be restricted by YouTube's Terms or copyright law. Use your own content or obtain permission.
-- YouTube may change its delivery methods; update yt-dlp if a download stops working: `yt-dlp -U`.
-- Both styles are generated, so output count is twice the number of segments.
-- The output is encoded at 1080×1920. Upscaling a low-resolution source cannot restore missing detail.
-- Very long videos take time and disk space. The server rejects videos longer than four hours.
-- This is a local prototype: job state is held in memory and resets if the server restarts. Generated files remain in `data/jobs`.
-- The ZIP is compressed lightly because MP4 files are already compressed.
-- Fast re-encoding is used for reliable segment boundaries; this is slower than stream-copy cutting.
+## Output
+
+Every source is split into consecutive fixed 30-second segments. Each segment gets one center-crop MP4 and one blur-background MP4. The ZIP contains all outputs. Video is encoded at 1080×1920 using H.264; audio is AAC when present. Silent videos remain silent.
+
+## Limits and safeguards
+
+- Maximum source duration: 4 hours.
+- Default upload size: 2 GB.
+- Upscaling cannot restore detail absent from a low-resolution source.
+- Re-encoding gives reliable boundaries but is slower than stream-copy cutting.
+- Job state is held in memory and resets if the server restarts. Completed files remain in `data/jobs`.
+- Large projects require substantial free disk space.
+- Use authorized sources and comply with platform terms and copyright law. This tool does not bypass DRM, private-video restrictions, age gates, paid access or other controls.
 
 ## Troubleshooting
 
-**`ffmpeg` / `ffprobe` / `yt-dlp` not recognized:** reopen PowerShell or add the installation directory to PATH.
+**FFmpeg/ffprobe not recognized:** reopen the terminal or add the FFmpeg binary folder to PATH.
 
-**YouTube download fails:** update yt-dlp (`yt-dlp -U`). Some videos require sign-in or are unavailable to third-party downloaders; this prototype intentionally does not handle cookies or bypass restrictions.
+**YouTube download fails:** update yt-dlp. Some videos are not available to third-party tools. QClips intentionally does not handle browser cookies; upload a permitted local video instead.
 
-**`libx264` encoder missing:** install a full FFmpeg build (the Gyan Windows build is suitable).
+**Upload too large:** set `MAX_VIDEO_MB` to a suitable value, considering disk space and local capacity.
 
-**Disk space:** both variants can consume significant space. Delete old job folders from `data/jobs` when finished.
-
-**Black bars / subject crop:** use the blur-background variant to preserve the full source frame. Center-crop intentionally fills the screen.
+**libx264 missing:** install a full FFmpeg build with the libx264 encoder.
 
 ## API
 
-- `POST /api/jobs` body: `{"url":"https://youtu.be/...","clipSeconds":30}`
-- `GET /api/jobs/:id` job status and generated file list
-- `GET /api/jobs/:id/download` ZIP archive
-- `GET /api/health` checks local dependencies
+- `POST /api/jobs` JSON body `{"url":"https://youtu.be/..."}` — YouTube job.
+- `POST /api/jobs/upload` multipart field `video` — local file job.
+- `GET /api/jobs/:id` — status and output list.
+- `GET /api/jobs/:id/download` — ZIP archive.
+- `GET /api/health` — dependency checks.
