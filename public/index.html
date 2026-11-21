@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ClipForge — Batch Reel Generator</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,Segoe UI,sans-serif;background:#0b1020;color:#edf2ff}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#172342 0,#0b1020 55%)}
+main{max-width:760px;margin:0 auto;padding:48px 20px}
+header{margin-bottom:30px}.logo{font-weight:800;letter-spacing:.12em;color:#8daaff;font-size:13px}
+h1{font-size:clamp(32px,7vw,52px);margin:12px 0 8px;letter-spacing:-.04em}
+p{color:#aab6d1;line-height:1.55}.panel{background:#111a2e;border:1px solid #263451;border-radius:18px;padding:22px;margin:18px 0;box-shadow:0 18px 60px #0003}
+label{display:block;font-size:13px;color:#b9c5df;margin:0 0 9px}
+input{width:100%;background:#0b1325;border:1px solid #344563;border-radius:10px;padding:14px;color:#fff;font-size:15px;outline:none}
+input:focus{border-color:#819fff}button{border:0;border-radius:10px;background:#7997ff;color:#071126;font-weight:800;padding:14px 18px;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}.full{width:100%;margin-top:14px}
+.note{font-size:12px;color:#8795b2}.styles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.style{background:#0b1325;border:1px solid #344563;padding:13px;border-radius:12px}
+.style b{display:block;font-size:14px;margin-bottom:5px}.style span{font-size:12px;color:#9eacc9}
+.status{display:none}.bar{height:9px;background:#273652;border-radius:20px;overflow:hidden;margin:14px 0}.bar>i{display:block;height:100%;width:0;background:#7b9aff;transition:width .3s}
+#message{color:#dce5ff;font-size:14px}#result a{color:#a9bdff;font-weight:700}
+.error{color:#ff9d9d}footer{font-size:12px;color:#73819f;margin-top:24px}
+@media(max-width:520px){main{padding:30px 14px}.styles{grid-template-columns:1fr}}
+</style></head>
+<body><main>
+<header><div class="logo">CLIPFORGE / LOCAL TOOL</div><h1>Your video.<br>40 moments. Ready.</h1><p>Split a video into 30-second segments and export each segment in two portrait styles.</p></header>
+<section class="panel">
+<label for="url">YouTube video URL</label><input id="url" type="url" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
+<p class="note">Use only videos you own or are authorized to download. YouTube terms and copyright restrictions apply.</p>
+<label>Output styles — both generated</label>
+<div class="styles"><div class="style"><b>9:16 Center Crop</b><span>Fills the screen; edges may be cropped.</span></div><div class="style"><b>9:16 Blur Background</b><span>Preserves the full original frame.</span></div></div>
+<button id="start" class="full">Generate 30-second clips</button>
+</section>
+<section id="status" class="panel status">
+<strong id="state">Processing</strong><div class="bar"><i id="progress"></i></div><div id="message">Starting...</div>
+<div id="result" style="margin-top:16px"></div>
+</section>
+<footer>Runs locally on your computer. No AI API or paid clipping service. Processing time depends on video length and your CPU.</footer>
+</main>
+<script>
+const start=document.querySelector("#start"), statusBox=document.querySelector("#status");
+const state=document.querySelector("#state"), progress=document.querySelector("#progress");
+const message=document.querySelector("#message"), result=document.querySelector("#result");
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+start.onclick=async()=>{
+  const url=document.querySelector("#url").value.trim();
+  if(!url){alert("Paste a YouTube URL first.");return}
+  start.disabled=true;statusBox.style.display="block";result.innerHTML="";
+  state.textContent="Queued";message.textContent="Creating job...";progress.style.width="0%";
+  try{
+    const r=await fetch("/api/jobs",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url,clipSeconds:30})});
+    const data=await r.json();if(!r.ok)throw new Error(data.error||"Could not start job.");
+    let done=false;
+    while(!done){
+      await sleep(1800);
+      const s=await fetch("/api/jobs/"+data.id);const job=await s.json();
+      state.textContent=job.status.toUpperCase();message.textContent=job.message||"Working...";
+      progress.style.width=(job.progress||0)+"%";
+      if(job.status==="completed"){
+        done=true;result.innerHTML=`<p><b>${job.totalSegments} segments × 2 styles = ${job.outputCount} videos</b></p><p><a href="/api/jobs/${data.id}/download">Download all clips (.ZIP)</a></p>`;
+      }else if(job.status==="failed"){done=true;throw new Error(job.error||job.message)}
+    }
+  }catch(e){state.textContent="ERROR";message.innerHTML='<span class="error"></span>';message.querySelector("span").textContent=e.message}
+  finally{start.disabled=false}
+};
+</script></body></html>
