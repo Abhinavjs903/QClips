@@ -34,7 +34,7 @@ const upload = multer({
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static(PUBLIC_DIR));
 
-function run(command, args) {
+function run(command, args, onOutput) {
   return new Promise((resolve, reject) => {
     const label = path.basename(command);
     console.log(`[QClips] Starting ${label}...`);
@@ -44,6 +44,7 @@ function run(command, args) {
       const chunk = d.toString();
       stdout += chunk;
       if (chunk.trim()) console.log(`[${label}] ${chunk.trim()}`);
+      onOutput?.(chunk);
     });
     child.stderr?.on("data", d => {
       const chunk = d.toString();
@@ -150,9 +151,20 @@ async function processJob(job) {
       const template = path.join(job.dir, "source.%(ext)s");
       await run(process.env.YTDLP_PATH || "yt-dlp", [
         "--no-playlist", "--no-warnings",
+        "--concurrent-fragments", process.env.YTDLP_CONCURRENT_FRAGMENTS || "8",
         "-f", "bv*[height<=1080]+ba/b[height<=1080]/b",
         "--merge-output-format", "mp4", "-o", template, job.url
-      ]);
+      ], chunk => {
+        const matches = [...chunk.matchAll(/(\\d+(?:\\.\\d+)?)%/g)];
+        if (!matches.length) return;
+        const percent = Number(matches[matches.length - 1][1]);
+        if (Number.isFinite(percent)) {
+          update(job, {
+            progress: Math.min(7, 2 + Math.round(percent * 0.05)),
+            message: "Downloading source · " + Math.round(percent) + "% complete"
+          });
+        }
+      });
       const files = fs.readdirSync(job.dir).filter(f => f.startsWith("source."));
       if (!files.length) throw new Error("Download completed but no source file was created.");
       videoPath = path.join(job.dir, files.find(f => f.endsWith(".mp4")) || files[0]);
