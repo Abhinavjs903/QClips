@@ -50,6 +50,7 @@ function run(command, args, onOutput) {
       const chunk = d.toString();
       stderr += chunk;
       if (chunk.trim()) console.log(`[${label}] ${chunk.trim()}`);
+      onOutput?.(chunk);
     });
     child.on("error", err => {
       if (settled) return;
