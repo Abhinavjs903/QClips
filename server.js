@@ -36,18 +36,30 @@ app.use(express.static(PUBLIC_DIR));
 
 function run(command, args) {
   return new Promise((resolve, reject) => {
+    const label = path.basename(command);
+    console.log(`[QClips] Starting ${label}...`);
     const child = spawn(command, args, { windowsHide: true });
     let stdout = "", stderr = "", settled = false;
-    child.stdout?.on("data", d => stdout += d.toString());
-    child.stderr?.on("data", d => stderr += d.toString());
+    child.stdout?.on("data", d => {
+      const chunk = d.toString();
+      stdout += chunk;
+      if (chunk.trim()) console.log(`[${label}] ${chunk.trim()}`);
+    });
+    child.stderr?.on("data", d => {
+      const chunk = d.toString();
+      stderr += chunk;
+      if (chunk.trim()) console.log(`[${label}] ${chunk.trim()}`);
+    });
     child.on("error", err => {
       if (settled) return;
       settled = true;
+      console.error(`[QClips] ${label} failed to start: ${err.message}`);
       reject(new Error(`Could not start ${command}. Check that it is installed and in PATH. ${err.message}`));
     });
     child.on("close", code => {
       if (settled) return;
       settled = true;
+      console.log(`[QClips] ${label} exited with code ${code}`);
       code === 0 ? resolve({ stdout, stderr }) :
         reject(new Error(`${command} failed (exit ${code}). ${stderr.slice(-2500) || stdout.slice(-1000)}`));
     });
@@ -113,7 +125,7 @@ async function createClips(job, videoPath, duration, hasAudio) {
     const output = path.join(outDir, filename);
     const filter = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1";
     const args = [
-      "-hide_banner", "-loglevel", "error", "-y",
+      "-hide_banner", "-loglevel", "warning", "-stats", "-y",
       "-ss", String(start), "-i", videoPath, "-t", String(clipDuration),
       "-vf", filter, "-map", "0:v:0", ...(hasAudio ? ["-map", "0:a:0?"] : []),
       "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23", "-pix_fmt", "yuv420p",
