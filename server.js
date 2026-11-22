@@ -105,7 +105,7 @@ async function createClips(job, videoPath, duration, hasAudio) {
       { key: "center-crop", filename: `${base}_center-crop.mp4`,
         filter: "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1" },
       { key: "blur-background", filename: `${base}_blur-background.mp4`,
-        filter: "[0:v]split=2[bg][fg];[bg]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:10[blur];[fg]scale=1080:1920:force_original_aspect_ratio=decrease[front];[blur][front]overlay=(W-w)/2:(H-h)/2,setsar=1,format=yuv420p" }
+        filter: "[0:v]split=2[bg][fg];[bg]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=20:6[blur];[fg]scale=1080:1920:force_original_aspect_ratio=decrease[front];[blur][front]overlay=(W-w)/2:(H-h)/2,setsar=1,format=yuv420p" }
     ];
 
     for (const variant of variants) {
@@ -116,16 +116,20 @@ async function createClips(job, videoPath, duration, hasAudio) {
         "-hide_banner", "-loglevel", "error", "-y",
         "-ss", String(start), "-i", videoPath, "-t", String(clipDuration),
         ...filters, "-map", "0:v:0", ...(hasAudio ? ["-map", "0:a:0?"] : []),
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
-        ...(hasAudio ? ["-c:a", "aac", "-b:a", "192k"] : ["-an"]),
+        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23", "-pix_fmt", "yuv420p",
+        ...(hasAudio ? ["-c:a", "aac", "-b:a", "128k"] : ["-an"]),
         "-movflags", "+faststart", "-avoid_negative_ts", "make_zero", output
       ];
       await run(process.env.FFMPEG_PATH || "ffmpeg", args);
       results.push({ name: variant.filename, style: variant.key, clipNumber: i + 1,
         start, end: start + clipDuration, size: fs.statSync(output).size });
+      const completedRenders = results.length;
+      const totalRenders = total * variants.length;
+      update(job, {
+        progress: Math.min(99, 12 + Math.round((completedRenders / totalRenders) * 87)),
+        message: `Rendered ${completedRenders} of ${totalRenders} versions (clip ${i + 1}/${total}: ${variant.key})`
+      });
     }
-    update(job, { progress: Math.round(((i + 1) / total) * 100),
-      message: `Created segment ${i + 1} of ${total} (${results.length} files)` });
   }
   return { results, totalSegments: total };
 }
