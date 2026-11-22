@@ -31,15 +31,15 @@ button:disabled{opacity:.5;cursor:wait}.full{width:100%;margin-top:14px}
 <header><div class="logo">QCLIPS / LOCAL VIDEO TOOL</div><h1>Long video.<br>Short clips.</h1><p>Split a video into consecutive 30-second segments and export two vertical versions of every segment.</p></header>
 <section class="panel">
 <div class="tabs" role="tablist" aria-label="Video source">
-<button class="tab" id="uploadTab" role="tab" aria-selected="true" aria-controls="uploadPanel" type="button">Upload video</button>
-<button class="tab" id="youtubeTab" role="tab" aria-selected="false" aria-controls="youtubePanel" type="button">YouTube URL</button>
+<button class="tab" id="youtubeTab" role="tab" aria-selected="true" aria-controls="youtubePanel" type="button">YouTube URL</button>
+<button class="tab" id="uploadTab" role="tab" aria-selected="false" aria-controls="uploadPanel" type="button">Upload video</button>
 </div>
-<div id="uploadPanel" role="tabpanel" aria-labelledby="uploadTab">
+<div id="uploadPanel" role="tabpanel" aria-labelledby="uploadTab" hidden>
 <label for="video">Choose a video from your device</label>
 <input id="video" type="file" accept="video/mp4,video/quicktime,video/x-matroska,video/webm,.mp4,.mov,.mkv,.webm,.m4v">
 <p class="note">MP4, MOV, MKV, WEBM or M4V · Maximum 2 GB · Processing stays on this computer.</p>
 </div>
-<div id="youtubePanel" role="tabpanel" aria-labelledby="youtubeTab" hidden>
+<div id="youtubePanel" role="tabpanel" aria-labelledby="youtubeTab">
 <label for="url">YouTube video URL</label>
 <input id="url" type="url" placeholder="https://youtu.be/..." autocomplete="off">
 <p class="note">Use only content you own or are authorized to download. Some videos may be blocked by YouTube; upload a permitted local file as the fallback.</p>
@@ -62,7 +62,7 @@ const state=document.querySelector("#state"), progress=document.querySelector("#
 const message=document.querySelector("#message"), result=document.querySelector("#result");
 const uploadTab=document.querySelector("#uploadTab"), youtubeTab=document.querySelector("#youtubeTab");
 const uploadPanel=document.querySelector("#uploadPanel"), youtubePanel=document.querySelector("#youtubePanel");
-let sourceMode="upload";
+let sourceMode="youtube";
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 function setMode(mode){
   sourceMode=mode; const isUpload=mode==="upload";
