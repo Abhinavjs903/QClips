@@ -90,50 +90,46 @@ async function inspectVideo(videoPath) {
 }
 
 async function createClips(job, videoPath, duration, hasAudio) {
-  const total = Math.ceil(duration / job.clipSeconds);
+  const total = duration < 60 ? 1 : duration < 120 ? 2 : 3;
+  const clipDuration = Math.min(job.clipSeconds, duration / total);
   const outDir = path.join(job.dir, "clips");
   fs.mkdirSync(outDir, { recursive: true });
   const results = [];
 
-  for (let i = 0; i < total; i++) {
-    const start = i * job.clipSeconds;
-    const clipDuration = Math.min(job.clipSeconds, duration - start);
-    if (clipDuration <= 0.05) continue;
+  // Divide the source into broad sections, then choose one random moment per section.
+  // This keeps clips spread out and guarantees they do not overlap.
+  const sectionLength = duration / total;
+  const starts = Array.from({ length: total }, (_, i) => {
+    const sectionStart = i * sectionLength;
+    const available = Math.max(0, sectionLength - clipDuration);
+    return sectionStart + Math.random() * available;
+  }).sort((a, b) => a - b);
+
+  for (let i = 0; i < starts.length; i++) {
+    const start = starts[i];
     const n = String(i + 1).padStart(3, "0");
     const base = `${n}_from_${formatTime(start)}_to_${formatTime(start + clipDuration)}`;
-    const variants = [
-      { key: "center-crop", filename: `${base}_center-crop.mp4`,
-        filter: "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1" },
-      { key: "blur-background", filename: `${base}_blur-background.mp4`,
-        filter: "[0:v]split=2[bg][fg];[bg]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=20:6[blur];[fg]scale=1080:1920:force_original_aspect_ratio=decrease[front];[blur][front]overlay=(W-w)/2:(H-h)/2,setsar=1,format=yuv420p" }
+    const filename = `${base}_center-crop.mp4`;
+    const output = path.join(outDir, filename);
+    const filter = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1";
+    const args = [
+      "-hide_banner", "-loglevel", "error", "-y",
+      "-ss", String(start), "-i", videoPath, "-t", String(clipDuration),
+      "-vf", filter, "-map", "0:v:0", ...(hasAudio ? ["-map", "0:a:0?"] : []),
+      "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23", "-pix_fmt", "yuv420p",
+      ...(hasAudio ? ["-c:a", "aac", "-b:a", "128k"] : ["-an"]),
+      "-movflags", "+faststart", "-avoid_negative_ts", "make_zero", output
     ];
-
-    for (const variant of variants) {
-      const output = path.join(outDir, variant.filename);
-      const filters = variant.key === "blur-background"
-        ? ["-filter_complex", variant.filter] : ["-vf", variant.filter];
-      const args = [
-        "-hide_banner", "-loglevel", "error", "-y",
-        "-ss", String(start), "-i", videoPath, "-t", String(clipDuration),
-        ...filters, "-map", "0:v:0", ...(hasAudio ? ["-map", "0:a:0?"] : []),
-        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23", "-pix_fmt", "yuv420p",
-        ...(hasAudio ? ["-c:a", "aac", "-b:a", "128k"] : ["-an"]),
-        "-movflags", "+faststart", "-avoid_negative_ts", "make_zero", output
-      ];
-      await run(process.env.FFMPEG_PATH || "ffmpeg", args);
-      results.push({ name: variant.filename, style: variant.key, clipNumber: i + 1,
-        start, end: start + clipDuration, size: fs.statSync(output).size });
-      const completedRenders = results.length;
-      const totalRenders = total * variants.length;
-      update(job, {
-        progress: Math.min(99, 12 + Math.round((completedRenders / totalRenders) * 87)),
-        message: `Rendered ${completedRenders} of ${totalRenders} versions (clip ${i + 1}/${total}: ${variant.key})`
-      });
-    }
+    await run(process.env.FFMPEG_PATH || "ffmpeg", args);
+    results.push({ name: filename, style: "center-crop", clipNumber: i + 1,
+      start, end: start + clipDuration, size: fs.statSync(output).size });
+    update(job, {
+      progress: Math.min(99, 12 + Math.round((results.length / total) * 87)),
+      message: `Rendered ${results.length} of ${total} random clips`
+    });
   }
   return { results, totalSegments: total };
 }
-
 async function processJob(job) {
   try {
     let videoPath = job.sourcePath;
@@ -151,7 +147,7 @@ async function processJob(job) {
     }
     update(job, { status: "processing", progress: 8, message: "Checking source video..." });
     const { duration, hasAudio } = await inspectVideo(videoPath);
-    update(job, { duration, progress: 12, message: "Generating both portrait versions..." });
+    update(job, { duration, progress: 12, message: "Picking random moments and creating portrait clips..." });
     const generated = await createClips(job, videoPath, duration, hasAudio);
     update(job, { status: "completed", progress: 100, message: "All clips are ready.",
       totalSegments: generated.totalSegments, files: generated.results, outputCount: generated.results.length });
@@ -165,7 +161,7 @@ async function processJob(job) {
 function startJob(source) {
   const id = crypto.randomUUID(), dir = path.join(JOBS_DIR, id);
   fs.mkdirSync(dir, { recursive: true });
-  const job = { id, ...source, clipSeconds: 30, dir, status: "queued", progress: 0,
+  const job = { id, ...source, clipSeconds: 20, dir, status: "queued", progress: 0,
     message: "Queued...", createdAt: new Date().toISOString(), files: [] };
   jobs.set(id, job);
   processJob(job);
