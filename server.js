@@ -138,7 +138,7 @@ async function createClips(job, videoPath, duration, hasAudio) {
     results.push({ name: filename, style: "center-crop", clipNumber: i + 1,
       start, end: start + clipDuration, size: fs.statSync(output).size });
     update(job, {
-      progress: Math.min(99, 12 + Math.round((results.length / total) * 87)),
+      progress: Math.min(99, 70 + Math.round((results.length / total) * 29)),
       message: `Rendered ${results.length} of ${total} random clips`
     });
   }
@@ -161,7 +161,7 @@ async function processJob(job) {
         const percent = Number(matches[matches.length - 1][1]);
         if (Number.isFinite(percent)) {
           update(job, {
-            progress: Math.min(7, 2 + Math.round(percent * 0.05)),
+            progress: Math.min(65, 2 + Math.round(percent * 0.63)),
             message: "Downloading source · " + Math.round(percent) + "% complete"
           });
         }
@@ -170,9 +170,9 @@ async function processJob(job) {
       if (!files.length) throw new Error("Download completed but no source file was created.");
       videoPath = path.join(job.dir, files.find(f => f.endsWith(".mp4")) || files[0]);
     }
-    update(job, { status: "processing", progress: 8, message: "Checking source video..." });
+    update(job, { status: "processing", progress: 68, message: "Checking source video..." });
     const { duration, hasAudio } = await inspectVideo(videoPath);
-    update(job, { duration, progress: 12, message: "Picking random moments and creating portrait clips..." });
+    update(job, { duration, progress: 70, message: "Picking random moments and creating portrait clips..." });
     const generated = await createClips(job, videoPath, duration, hasAudio);
     update(job, { status: "completed", progress: 100, message: "All clips are ready.",
       totalSegments: generated.totalSegments, files: generated.results, outputCount: generated.results.length });
